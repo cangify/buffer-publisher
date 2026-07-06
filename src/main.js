@@ -12,6 +12,7 @@ const DEFAULT_UPLOADERS = ['pixeldrain', 'catbox', 'litterbox', 'tempsh', '0x0',
 const BUFFER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_UPLOAD_TARGET_BYTES = Math.floor(BUFFER_IMAGE_MAX_BYTES * 0.94);
 const SIDEBAR_AD_URL = 'https://cangify.com/globle/ads/buffer-publisher/buffer-publisher.json';
+const DEFAULT_AD_REFRESH_SECONDS = 300;
 
 let mainWindow;
 
@@ -170,7 +171,10 @@ async function recordBufferUsage({ ok, status, headers, error }) {
 
 function safeHttpUrl(value) {
   try {
-    const url = new URL(String(value || '').trim());
+    let raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^www\./i.test(raw) || /^[a-z0-9.-]+\//i.test(raw)) raw = `https://${raw}`;
+    const url = new URL(raw);
     if (!['http:', 'https:'].includes(url.protocol)) return '';
     return url.toString();
   } catch {
@@ -193,9 +197,9 @@ function normalizeSidebarAd(raw) {
     };
   }).filter(Boolean) : [];
   return {
-    enabled: Boolean(data.enabled) && ads.length > 0,
+    enabled: data.enabled !== false && ads.length > 0,
     intervalSeconds: Math.max(3, Math.min(3600, Number(data.intervalSeconds) || 5)),
-    refreshSeconds: Math.max(30, Math.min(86400, Number(data.refreshSeconds) || 300)),
+    refreshSeconds: Math.max(30, Math.min(86400, Number(data.refreshSeconds) || DEFAULT_AD_REFRESH_SECONDS)),
     updatedAt: data.updatedAt || '',
     version,
     ads
@@ -206,7 +210,9 @@ async function getSidebarAd() {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(SIDEBAR_AD_URL, {
+    const jsonUrl = new URL(SIDEBAR_AD_URL);
+    jsonUrl.searchParams.set('_ad_json_v', String(Date.now()));
+    const res = await fetch(jsonUrl.toString(), {
       signal: controller.signal,
       cache: 'no-store',
       headers: { Accept: 'application/json' }
@@ -214,7 +220,7 @@ async function getSidebarAd() {
     if (!res.ok) throw new Error(`广告 JSON HTTP ${res.status}`);
     return normalizeSidebarAd(await res.json());
   } catch (err) {
-    return { enabled: false, intervalSeconds: 5, refreshSeconds: 300, updatedAt: '', version: '', ads: [], error: err.message };
+    return { enabled: false, intervalSeconds: 5, refreshSeconds: DEFAULT_AD_REFRESH_SECONDS, updatedAt: '', version: '', ads: [], error: err.message };
   } finally {
     clearTimeout(timer);
   }
