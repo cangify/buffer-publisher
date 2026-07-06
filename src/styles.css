@@ -107,6 +107,25 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); }
 .progressWrap { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin-bottom: 16px; }
 progress { width: 100%; height: 14px; accent-color: var(--accent2); margin-top: 8px; }
 
+
+.updateBox { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(106, 169, 255, .28); background: rgba(106, 169, 255, .08); border-radius: 16px; padding: 14px 16px; margin-top: 12px; }
+.updateBox strong { display: block; margin-bottom: 3px; }
+.updateBox p { font-size: 13px; }
+.updateBox button { flex: 0 0 auto; }
+.modalBackdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, .58); backdrop-filter: blur(10px); }
+.modalBackdrop.hidden { display: none; }
+.modalCard { width: min(620px, 94vw); max-height: 88vh; overflow: auto; border: 1px solid var(--line); border-radius: 22px; background: linear-gradient(180deg, rgba(34, 40, 54, .98), rgba(20, 25, 35, .98)); box-shadow: 0 26px 90px rgba(0,0,0,.48); padding: 20px; }
+.modalHead { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px; }
+.modalEyebrow { color: var(--accent2); font-size: 12px; font-weight: 900; letter-spacing: .16em; margin-bottom: 6px; }
+.modalClose { width: 38px; height: 38px; border-radius: 999px; padding: 0; font-size: 24px; line-height: 1; }
+.updateDialogBody { display: grid; gap: 13px; line-height: 1.6; }
+.updateVersionLine { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.updateVersionLine span, .updateRequired, .updateUrl { border-radius: 14px; background: rgba(106, 169, 255, .09); padding: 10px 12px; }
+.updateRequired { color: var(--warn); background: rgba(255, 210, 124, .10); font-weight: 900; }
+.updateNotes ul { margin: 8px 0 0; padding-left: 20px; color: var(--muted); }
+.updateUrl { color: var(--accent2); font-family: Consolas, "Microsoft YaHei", monospace; font-size: 12px; word-break: break-all; }
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+
 .aboutCard p { margin-bottom: 12px; }
 .aboutList { margin: 12px 0 18px; padding-left: 22px; color: var(--muted); line-height: 1.7; }
 .aboutList li { margin: 6px 0; }

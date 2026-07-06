@@ -11,7 +11,8 @@ const state = {
   uploadedAssets: [],
   ollamaModels: [],
   aiTitle: '',
-  sidebarAd: { items: [], index: 0, version: '', current: null, rotateTimer: null, refreshTimer: null }
+  sidebarAd: { items: [], index: 0, version: '', current: null, rotateTimer: null, refreshTimer: null },
+  updateInfo: null
 };
 
 const uploaderNames = {
@@ -26,7 +27,7 @@ const defaultUploaders = ['pixeldrain', 'catbox', 'litterbox', 'tempsh', '0x0', 
 
 const i18n = {
   zh: {
-    appTitle: 'Buffer发布器', navCompose: '发布', navPosts: '文章列表', navLogs: '运行日志', navSettings: '设置', navWatermark: '水印设置', navOllama: 'Ollama', navAbout: '关于软件', aboutTitle: '关于软件', aboutDesc: '了解 Buffer发布器的用途、工作方式和官方网站。', aboutPurpose: '软件用途', aboutPurposeText: 'Buffer发布器用于把图片、视频和文章内容批量发布到 Buffer。它会先将本地媒体转换为可被 Buffer 读取的公网直链，再提交到 Buffer 队列或按指定时间定时发布，适合集中管理多平台社交媒体内容。', aboutFeature1: '支持选择多个 Buffer 账号/频道后一次发布。', aboutFeature2: '支持临时媒体上传源、上传超时和本机 API 用量查看。', aboutFeature3: '支持图片/视频水印，以及本机 Ollama 自动生成标题建议。', officialSite: '官方网站', openOfficialSite: '打开官方网站', langButton: 'EN', hint: '官方 Buffer API + 临时直链上传',
+    appTitle: 'Buffer发布器', navCompose: '发布', navPosts: '文章列表', navLogs: '运行日志', navSettings: '设置', navWatermark: '水印设置', navOllama: 'Ollama', navAbout: '关于软件', aboutTitle: '关于软件', aboutDesc: '了解 Buffer发布器的用途、工作方式和官方网站。', aboutPurpose: '软件用途', aboutPurposeText: 'Buffer发布器用于把图片、视频和文章内容批量发布到 Buffer。它会先将本地媒体转换为可被 Buffer 读取的公网直链，再提交到 Buffer 队列或按指定时间定时发布，适合集中管理多平台社交媒体内容。', aboutFeature1: '支持选择多个 Buffer 账号/频道后一次发布。', aboutFeature2: '支持临时媒体上传源、上传超时和本机 API 用量查看。', aboutFeature3: '支持图片/视频水印，以及本机 Ollama 自动生成标题建议。', officialSite: '官方网站', openOfficialSite: '打开官方网站', checkUpdate: '检查软件更新', updateTitle: '发现新版本', updateCurrent: '当前版本', updateLatest: '最新版本', updateDate: '发布日期', updateNotes: '更新说明', updateNoNotes: '暂无更新说明。', updateRequired: '这是一个重要更新，建议尽快下载。', updateNewest: '当前已是最新版本', updateFailed: '检查更新失败', updateNoLink: '没有可用的下载链接', updateCopied: '下载链接已复制', downloadUpdate: '下载更新', copyLink: '复制链接', langButton: 'EN', hint: '官方 Buffer API + 临时直链上传',
     composeTitle: '创建文章', composeDesc: '先上传媒体获取直链，再提交到 Buffer 队列或定时发布。', refreshAccount: '刷新账号', uploadOnly: '只上传媒体', publish: '上传并发布到 Buffer', progressReady: '准备中...',
     orgLabel: '组织 / Organization', channelsEmpty: '还没有读取账号。请先到“设置”填写 Buffer Personal API Key，然后点击顶部“刷新账号”。读取成功后，这里会显示已绑定账号。',
     modeLabel: '发布方式', modeQueue: '加入 Buffer 队列', modeSchedule: '指定日期时间发布', dueAtLabel: '发布时间（本地时间，会自动转 UTC）', scheduleWarning: '定时发布前，软件会先把媒体上传成公网直链并提交给 Buffer。不同上传源保存时间不同；如果定时很久以后发布，建议优先使用 Pixeldrain/Catbox，并在 Buffer 队列里确认媒体已显示成功。',
@@ -40,7 +41,7 @@ const i18n = {
     ollamaEnabled: '启用 Ollama 自动取标题', ollamaUrlLabel: 'Ollama 地址', ollamaModelLabel: '视觉模型', ollamaNoModels: '请先读取模型', ollamaStatusIdle: '还没有测试连接。', ollamaUsageTitle: 'Ollama Token 用量（本机统计）', refreshOllamaUsage: '刷新本机用量', ollamaModelHelp: '建议使用支持图片的视觉模型，例如 llava、llava:13b、bakllava、qwen2.5vl 等。模型需要先在 Ollama 里 pull 好。', ollamaPromptLabel: '取标题要求 / Ollama 提示词', ollamaPromptPlaceholder: '例如：请根据图片/视频内容，生成一个适合社交媒体发布的中文标题。标题要简短、吸引人，不要超过 20 个字，只输出标题，不要解释。', ollamaPromptHelp: '这里填写的是给 Ollama 的取标题规则。你可以要求标题语言、长度、风格、是否带表情、是否只输出标题等。', ollamaTimeoutLabel: '超时时间（毫秒）', ollamaPrivacyHelp: '图片会直接提交给本机 Ollama；视频会在本机按总时长平均截取 8 张图后提交。不会上传到外网。', latestPromptTokens: '最近输入 Token', latestOutputTokens: '最近输出 Token', latestTotalTokens: '最近总 Token', localTotalTokens30d: '30 天累计 Token', latestModel: '最近模型', latestDuration: '最近耗时', localCalls30d: '30 天调用', localPrompt30d: '30 天输入', localOutput30d: '30 天输出', seconds: '秒', times: '次', ollamaUsageRefreshed: 'Ollama 本机用量已刷新。', ollamaUsageLoadFailed: '读取 Ollama 用量失败', ollamaConnecting: '正在连接 Ollama 并读取模型...', ollamaConnected: '连接成功，读取到 {count} 个模型。', ollamaConnectFailed: '连接失败', ollamaSettingsSaved: 'Ollama 设置已保存。', ollamaSettingsSaveFailed: '保存失败', aiTitleSource: '由本机 Ollama 根据已选择的图片/视频帧生成。', channelUnavailable: '不可用'
   },
   en: {
-    appTitle: 'Buffer Publisher', navCompose: 'Compose', navPosts: 'Posts', navLogs: 'Logs', navSettings: 'Settings', navWatermark: 'Watermark', navOllama: 'Ollama', navAbout: 'About', aboutTitle: 'About', aboutDesc: 'Learn what Buffer Publisher does, how it works, and the official website.', aboutPurpose: 'Purpose', aboutPurposeText: 'Buffer Publisher helps publish images, videos, and post text to Buffer in batches. It uploads local media as public direct links that Buffer can read, then submits posts to the Buffer queue or schedules them for a specific time, making multi-platform social publishing easier to manage.', aboutFeature1: 'Publish to multiple Buffer accounts/channels in one workflow.', aboutFeature2: 'Use temporary media upload sources, upload timeouts, and local API usage stats.', aboutFeature3: 'Add image/video watermarks and generate title suggestions with local Ollama.', officialSite: 'Official website', openOfficialSite: 'Open Official Website', langButton: '中文', hint: 'Official Buffer API + temporary direct media links',
+    appTitle: 'Buffer Publisher', navCompose: 'Compose', navPosts: 'Posts', navLogs: 'Logs', navSettings: 'Settings', navWatermark: 'Watermark', navOllama: 'Ollama', navAbout: 'About', aboutTitle: 'About', aboutDesc: 'Learn what Buffer Publisher does, how it works, and the official website.', aboutPurpose: 'Purpose', aboutPurposeText: 'Buffer Publisher helps publish images, videos, and post text to Buffer in batches. It uploads local media as public direct links that Buffer can read, then submits posts to the Buffer queue or schedules them for a specific time, making multi-platform social publishing easier to manage.', aboutFeature1: 'Publish to multiple Buffer accounts/channels in one workflow.', aboutFeature2: 'Use temporary media upload sources, upload timeouts, and local API usage stats.', aboutFeature3: 'Add image/video watermarks and generate title suggestions with local Ollama.', officialSite: 'Official website', openOfficialSite: 'Open Official Website', checkUpdate: 'Check for Updates', updateTitle: 'New Version Available', updateCurrent: 'Current version', updateLatest: 'Latest version', updateDate: 'Release date', updateNotes: 'Release notes', updateNoNotes: 'No release notes yet.', updateRequired: 'This is an important update. Please download it soon.', updateNewest: 'You are on the latest version', updateFailed: 'Update check failed', updateNoLink: 'No download link available', updateCopied: 'Download link copied', downloadUpdate: 'Download Update', copyLink: 'Copy Link', langButton: '中文', hint: 'Official Buffer API + temporary direct media links',
     composeTitle: 'Create Post', composeDesc: 'Upload media to get direct links, then submit to the Buffer queue or schedule.', refreshAccount: 'Refresh Account', uploadOnly: 'Upload Media Only', publish: 'Upload & Publish to Buffer', progressReady: 'Ready...',
     orgLabel: 'Organization', channelsEmpty: 'No account loaded yet. Go to Settings, enter your Buffer Personal API Key, then click Refresh Account. Connected channels will appear here.',
     modeLabel: 'Publish Mode', modeQueue: 'Add to Buffer Queue', modeSchedule: 'Schedule for Date/Time', dueAtLabel: 'Publish Time (local time, auto-converted to UTC)', scheduleWarning: 'Before scheduling, the app uploads media to public direct links and submits them to Buffer. Retention varies by host; for far-future schedules, prefer Pixeldrain/Catbox and confirm the media appears correctly in your Buffer queue.',
@@ -149,6 +150,11 @@ function applyLanguage() {
   setText('#about h2', 'aboutTitle');
   setText('#about .topbar p', 'aboutDesc');
   setText('#openOfficialSite', 'openOfficialSite');
+  setText('#checkUpdateBtn', 'checkUpdate');
+  setText('#aboutCheckUpdateBtn', 'checkUpdate');
+  setText('#updateDialogTitle', 'updateTitle');
+  setText('#copyUpdateLinkBtn', 'copyLink');
+  setText('#downloadUpdateBtn', 'downloadUpdate');
   setText('#about .aboutCard > label', 'aboutPurpose');
   setText('#about .aboutCard > p', 'aboutPurposeText');
   setText('#about .aboutList li:nth-child(1)', 'aboutFeature1');
@@ -336,6 +342,68 @@ function renderPostAssets(post) {
   return `<div class="postMediaGrid">${items}</div>`;
 }
 
+
+
+async function checkSoftwareUpdate({ silent = false } = {}) {
+  const buttons = ['#checkUpdateBtn', '#aboutCheckUpdateBtn'].map(sel => $(sel)).filter(Boolean);
+  if (!silent) buttons.forEach(button => { button.disabled = true; });
+  try {
+    const info = await window.appApi.checkUpdate();
+    state.updateInfo = info;
+    if (info?.hasUpdate) {
+      showUpdateDialog(info);
+      log(`发现新版本：${info.latestVersion}（当前 ${info.currentVersion}）。`);
+    } else {
+      log(`软件已是最新版本：${info?.currentVersion || ''}`);
+      if (!silent) alert(tr('updateNewest'));
+    }
+  } catch (err) {
+    log(`检查更新失败：${err.message}`);
+    if (!silent) alert(`${tr('updateFailed')}：${err.message}`);
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+
+function showUpdateDialog(info) {
+  const dialog = $('#updateDialog');
+  const body = $('#updateDialogBody');
+  if (!dialog || !body) return;
+  const notes = Array.isArray(info.notes) && info.notes.length
+    ? `<ul>${info.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
+    : `<p class="small">${escapeHtml(tr('updateNoNotes'))}</p>`;
+  body.innerHTML = `
+    <div class="updateVersionLine">
+      <span>${escapeHtml(tr('updateCurrent'))}：<b>${escapeHtml(info.currentVersion || '')}</b></span>
+      <span>${escapeHtml(tr('updateLatest'))}：<b>${escapeHtml(info.latestVersion || '')}</b></span>
+    </div>
+    ${info.releaseDate ? `<div class="small">${escapeHtml(tr('updateDate'))}：${escapeHtml(info.releaseDate)}</div>` : ''}
+    ${info.mandatory ? `<div class="updateRequired">${escapeHtml(tr('updateRequired'))}</div>` : ''}
+    <div class="updateNotes"><b>${escapeHtml(tr('updateNotes'))}</b>${notes}</div>
+    <div class="updateUrl">${escapeHtml(info.downloadUrl || info.homepage || '')}</div>`;
+  dialog.classList.remove('hidden');
+}
+
+function closeUpdateDialog() {
+  $('#updateDialog')?.classList.add('hidden');
+}
+
+function downloadUpdate() {
+  const url = state.updateInfo?.downloadUrl || state.updateInfo?.homepage;
+  if (!url) return alert(tr('updateNoLink'));
+  window.appApi.openExternal(url).catch(err => alert(`打开下载链接失败：${err.message}`));
+}
+
+async function copyUpdateLink() {
+  const url = state.updateInfo?.downloadUrl || state.updateInfo?.homepage || '';
+  if (!url) return alert(tr('updateNoLink'));
+  try {
+    await navigator.clipboard.writeText(url);
+    alert(tr('updateCopied'));
+  } catch {
+    alert(url);
+  }
+}
 
 function adImageUrl(url, version) {
   try {
@@ -979,6 +1047,12 @@ ${text}` : title;
   $('#clearLog').onclick = () => { $('#log').textContent = ''; };
   $('#openBufferApi').onclick = () => window.appApi.openExternal('https://publish.buffer.com/settings/api');
   $('#openOfficialSite').onclick = () => window.appApi.openExternal('https://cangify.com');
+  $('#checkUpdateBtn').onclick = () => checkSoftwareUpdate({ silent: false });
+  $('#aboutCheckUpdateBtn').onclick = () => checkSoftwareUpdate({ silent: false });
+  $('#downloadUpdateBtn').onclick = downloadUpdate;
+  $('#copyUpdateLinkBtn').onclick = copyUpdateLink;
+  $('#closeUpdateDialogBtn').onclick = closeUpdateDialog;
+  $('#updateDialog').onclick = event => { if (event.target.id === 'updateDialog') closeUpdateDialog(); };
   $('#sidebarAd').onclick = () => { if (state.sidebarAd.current?.linkUrl) window.appApi.openExternal(state.sidebarAd.current.linkUrl); };
   $('#sidebarAd').onkeydown = event => { if ((event.key === 'Enter' || event.key === ' ') && state.sidebarAd.current?.linkUrl) window.appApi.openExternal(state.sidebarAd.current.linkUrl); };
   bindPostMediaLinks();
@@ -1003,6 +1077,7 @@ ${text}` : title;
   bindEvents();
   await loadConfig();
   loadSidebarAd();
+  setTimeout(() => checkSoftwareUpdate({ silent: true }), 1200);
   renderFiles();
   renderPosts();
   await refreshUsage();

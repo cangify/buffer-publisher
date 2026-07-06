@@ -189,7 +189,10 @@
             <h2>关于软件</h2>
             <p>了解 Buffer发布器的用途、工作方式和官方网站。</p>
           </div>
-          <button id="openOfficialSite" class="primary">打开官方网站</button>
+          <div class="topActions">
+            <button id="checkUpdateBtn">检查软件更新</button>
+            <button id="openOfficialSite" class="primary">打开官方网站</button>
+          </div>
         </div>
 
         <div class="card aboutCard">
@@ -203,6 +206,13 @@
           <div class="officialSiteBox">
             <span>官方网站</span>
             <a href="https://cangify.com" data-open-url="https://cangify.com">cangify.com</a>
+          </div>
+          <div class="updateBox">
+            <div>
+              <strong>软件更新</strong>
+              <p>检查线上版本，发现新版后打开浏览器下载。</p>
+            </div>
+            <button id="aboutCheckUpdateBtn" type="button">检查软件更新</button>
           </div>
         </div>
       </section>
@@ -347,6 +357,23 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div id="updateDialog" class="modalBackdrop hidden">
+    <div class="modalCard updateDialog" role="dialog" aria-modal="true" aria-labelledby="updateDialogTitle">
+      <div class="modalHead">
+        <div>
+          <div class="modalEyebrow">UPDATE</div>
+          <h2 id="updateDialogTitle">发现新版本</h2>
+        </div>
+        <button id="closeUpdateDialogBtn" class="modalClose" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="updateDialogBody" class="updateDialogBody"></div>
+      <div class="modalActions">
+        <button id="copyUpdateLinkBtn" type="button">复制链接</button>
+        <button id="downloadUpdateBtn" class="primary" type="button">下载更新</button>
+      </div>
+    </div>
   </div>
 
   <script src="renderer.js"></script>

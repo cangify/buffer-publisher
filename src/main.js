@@ -12,6 +12,7 @@ const DEFAULT_UPLOADERS = ['pixeldrain', 'catbox', 'litterbox', 'tempsh', '0x0',
 const BUFFER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_UPLOAD_TARGET_BYTES = Math.floor(BUFFER_IMAGE_MAX_BYTES * 0.94);
 const SIDEBAR_AD_URL = 'https://cangify.com/globle/ads/buffer-publisher/buffer-publisher.json';
+const UPDATE_FEED_URL = 'https://cangify.com/globle/update/buffer-publisher.json';
 const DEFAULT_AD_REFRESH_SECONDS = 300;
 
 let mainWindow;
@@ -206,23 +207,70 @@ function normalizeSidebarAd(raw) {
   };
 }
 
-async function getSidebarAd() {
+
+function compareVersions(a, b) {
+  const left = versionParts(a);
+  const right = versionParts(b);
+  const len = Math.max(left.length, right.length, 1);
+  for (let i = 0; i < len; i += 1) {
+    const diff = (left[i] || 0) - (right[i] || 0);
+    if (diff) return diff > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+function versionParts(value) {
+  return String(value || '0')
+    .replace(/^v/i, '')
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .map(n => Number(n) || 0);
+}
+
+async function fetchJsonNoCache(urlString, cacheKey, timeoutMs = 10000) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const jsonUrl = new URL(SIDEBAR_AD_URL);
-    jsonUrl.searchParams.set('_ad_json_v', String(Date.now()));
-    const res = await fetch(jsonUrl.toString(), {
+    const url = new URL(urlString);
+    url.searchParams.set(cacheKey, String(Date.now()));
+    const res = await fetch(url.toString(), {
       signal: controller.signal,
       cache: 'no-store',
       headers: { Accept: 'application/json' }
     });
-    if (!res.ok) throw new Error(`广告 JSON HTTP ${res.status}`);
-    return normalizeSidebarAd(await res.json());
-  } catch (err) {
-    return { enabled: false, intervalSeconds: 5, refreshSeconds: DEFAULT_AD_REFRESH_SECONDS, updatedAt: '', version: '', ads: [], error: err.message };
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function checkUpdate() {
+  const currentVersion = app.getVersion();
+  const data = await fetchJsonNoCache(UPDATE_FEED_URL, '_update_json_v', 10000);
+  const latestVersion = String(data?.latest_version || data?.version || data?.latestVersion || '').replace(/^v/i, '').trim();
+  const downloadUrl = safeHttpUrl(data?.download_url || data?.windows_download_url || data?.url || data?.homepage || '');
+  const homepage = safeHttpUrl(data?.homepage || 'https://cangify.com');
+  const releaseDate = String(data?.release_date || data?.releaseDate || '').trim();
+  const notes = Array.isArray(data?.notes) ? data.notes.map(note => String(note).trim()).filter(Boolean).slice(0, 20) : [];
+  const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
+  return {
+    hasUpdate,
+    currentVersion,
+    latestVersion: latestVersion || currentVersion,
+    releaseDate,
+    mandatory: !!data?.mandatory,
+    downloadUrl,
+    homepage,
+    notes
+  };
+}
+
+async function getSidebarAd() {
+  try {
+    return normalizeSidebarAd(await fetchJsonNoCache(SIDEBAR_AD_URL, '_ad_json_v', 10000));
+  } catch (err) {
+    return { enabled: false, intervalSeconds: 5, refreshSeconds: DEFAULT_AD_REFRESH_SECONDS, updatedAt: '', version: '', ads: [], error: err.message };
   }
 }
 
@@ -753,6 +801,7 @@ ipcMain.handle('shell:openExternal', async (_evt, url) => {
   return shell.openExternal(safeUrl);
 });
 ipcMain.handle('ads:sidebar', getSidebarAd);
+ipcMain.handle('update:check', checkUpdate);
 ipcMain.handle('ollama:models', async () => listOllamaModels(await readConfig()));
 ipcMain.handle('ollama:title', async (_evt, payload) => generateOllamaTitle(await readConfig(), payload.images || [], payload.prompt || ''));
 ipcMain.handle('ollama:usage', async () => summarizeOllamaUsage(await readOllamaUsage()));
