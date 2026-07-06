@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buffer发布器</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>Buffer发布器</h1>
+      <button class="tab active" data-tab="compose">发布</button>
+      <button class="tab" data-tab="posts">文章列表</button>
+      <button class="tab" data-tab="ollama">Ollama</button>
+      <button class="tab" data-tab="settings">设置</button>
+      <button class="tab" data-tab="watermark">水印设置</button>
+      <button class="tab" data-tab="about">关于软件</button>
+      <button class="tab" data-tab="logs">运行日志</button>
+      <button id="languageToggle" class="languageToggle">EN</button>
+      <div class="hint">官方 Buffer API + 临时直链上传</div>
+    </aside>
+
+    <main>
+      <section id="compose" class="panel active">
+        <div class="topbar stickyActions">
+          <div>
+            <h2>创建文章</h2>
+            <p>先上传媒体获取直链，再提交到 Buffer 队列或定时发布。</p>
+          </div>
+          <div class="topActions">
+            <button id="refreshChannels">刷新账号</button>
+            <button id="uploadOnly" class="secondary">只上传媒体</button>
+            <button id="publish" class="primary">上传并发布到 Buffer</button>
+          </div>
+        </div>
+
+        <div class="progressWrap hidden" id="progressWrap">
+          <div class="row between"><span id="progressText">准备中...</span><span id="progressPercent">0%</span></div>
+          <progress id="progressBar" value="0" max="100"></progress>
+        </div>
+
+        <div class="grid two">
+          <div class="card">
+            <label>组织 / Organization</label>
+            <select id="organizationSelect"></select>
+            <div id="channels" class="channels empty compactEmpty">还没有读取账号。请先到“设置”填写 Buffer Personal API Key，然后点击顶部“刷新账号”。读取成功后，这里会显示已绑定账号。</div>
+          </div>
+
+          <div class="card">
+            <label>发布方式</label>
+            <select id="mode">
+              <option value="addToQueue">加入 Buffer 队列</option>
+              <option value="customScheduled">指定日期时间发布</option>
+            </select>
+            <div id="scheduleBox" class="scheduleBox hidden">
+              <label>发布时间（本地时间，会自动转 UTC）</label>
+              <input id="dueAt" type="datetime-local" />
+              <p class="warning">定时发布前，软件会先把媒体上传成公网直链并提交给 Buffer。不同上传源保存时间不同；如果定时很久以后发布，建议优先使用 Pixeldrain/Catbox，并在 Buffer 队列里确认媒体已显示成功。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card aiTitleCard hidden" id="aiTitleCard">
+          <div class="row between">
+            <label>AI 标题建议</label>
+            <div class="row gap">
+              <button id="useAiTitle">使用标题</button>
+              <button id="regenerateAiTitle">重新生成</button>
+            </div>
+          </div>
+          <div id="aiTitle" class="aiTitle"></div>
+          <p class="small">由本机 Ollama 根据已选择的图片/视频帧生成。</p>
+        </div>
+
+        <div class="card">
+          <label>文章正文</label>
+          <textarea id="postText" placeholder="输入要发布到 Buffer 的内容..."></textarea>
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <label>图片 / 视频</label>
+            <button id="pickFiles">选择文件</button>
+          </div>
+          <div id="dropZone" class="dropZone">
+            <strong>拖拽图片/视频到这里</strong>
+            <span>也可以点击右上角“选择文件”</span>
+            <div class="mediaRule mediaLimitHint">Buffer 每篇最多 1 个视频，多视频请拆成多篇。</div>
+          </div>
+          <div id="files" class="files empty">还没有添加图片或视频。可以拖拽文件到上方区域，或点击“选择文件”。</div>
+        </div>
+      </section>
+
+      <section id="posts" class="panel">
+        <div class="topbar">
+          <div>
+            <h2>文章列表</h2>
+            <p>查看 Buffer 里还没有发布的文章，以及已经发布的文章。</p>
+          </div>
+          <button id="refreshPosts" class="primary">刷新文章列表</button>
+        </div>
+
+        <div class="grid two">
+          <div class="card">
+            <div class="row between">
+              <label>未发布</label>
+              <span id="pendingCount" class="small"></span>
+            </div>
+            <div id="pendingPosts" class="postList empty compactEmpty">还没有读取。请先刷新账号，再点击“刷新文章列表”。</div>
+          </div>
+          <div class="card">
+            <div class="row between">
+              <label>已发布</label>
+              <span id="sentCount" class="small"></span>
+            </div>
+            <div id="sentPosts" class="postList empty compactEmpty">还没有读取。请先刷新账号，再点击“刷新文章列表”。</div>
+          </div>
+        </div>
+      </section>
+
+
+      <section id="watermark" class="panel">
+        <div class="topbar">
+          <div>
+            <h2>水印设置</h2>
+            <p>发布前自动给本地上传的图片/视频加水印；可使用文字或图片水印。</p>
+          </div>
+          <button id="saveWatermarkSettings" class="primary">保存水印设置</button>
+        </div>
+
+        <div class="card watermarkCard">
+          <label><input id="watermarkEnabled" type="checkbox" /> 启用自动水印</label>
+          <div class="watermarkMode row gap">
+            <button id="watermarkTextMode" type="button">文字水印</button>
+            <button id="watermarkImageMode" type="button">图片水印</button>
+          </div>
+          <div id="watermarkTextBox">
+            <label>水印文字</label>
+            <input id="watermarkText" placeholder="输入水印内容" />
+          </div>
+          <div id="watermarkImageBox" class="hidden">
+            <label>水印图片</label>
+            <div class="secretRow">
+              <input id="watermarkImagePath" readonly placeholder="请选择 PNG/JPG/WebP/BMP 图片" />
+              <button id="pickWatermarkImage" type="button">选择图片</button>
+            </div>
+          </div>
+          <div class="grid two watermarkGrid">
+            <div>
+              <label>水印位置</label>
+              <select id="watermarkPosition">
+                <option value="bottom-right">右下角</option>
+                <option value="bottom-left">左下角</option>
+                <option value="top-right">右上角</option>
+                <option value="top-left">左上角</option>
+                <option value="center">居中</option>
+              </select>
+            </div>
+            <div>
+              <label>透明度</label>
+              <input id="watermarkOpacity" type="range" min="0.15" max="1" step="0.05" />
+            </div>
+            <div id="watermarkFontSizeBox">
+              <label>文字字号</label>
+              <input id="watermarkFontSize" type="number" min="14" max="96" />
+            </div>
+            <div id="watermarkImageScaleBox" class="hidden">
+              <label>图片宽度比例</label>
+              <input id="watermarkImageScale" type="range" min="6" max="60" step="1" />
+            </div>
+          </div>
+          <div class="row gap watermarkChecks">
+            <label><input id="watermarkImages" type="checkbox" /> 图片加水印</label>
+            <label><input id="watermarkVideos" type="checkbox" /> 视频加水印</label>
+          </div>
+          <div class="watermarkPreview" id="watermarkPreview"><span>水印预览</span></div>
+          <div id="watermarkStatus" class="statusLine info hidden">水印设置已保存。</div>
+          <p class="small">ffmpeg 会随 Windows 安装包内置，用于视频水印处理；用户不需要另外安装。</p>
+        </div>
+      </section>
+
+      <section id="about" class="panel">
+        <div class="topbar">
+          <div>
+            <h2>关于软件</h2>
+            <p>了解 Buffer发布器的用途、工作方式和官方网站。</p>
+          </div>
+          <button id="openOfficialSite" class="primary">打开官方网站</button>
+        </div>
+
+        <div class="card aboutCard">
+          <label>软件用途</label>
+          <p>Buffer发布器用于把图片、视频和文章内容批量发布到 Buffer。它会先将本地媒体转换为可被 Buffer 读取的公网直链，再提交到 Buffer 队列或按指定时间定时发布，适合集中管理多平台社交媒体内容。</p>
+          <ul class="aboutList">
+            <li>支持选择多个 Buffer 账号/频道后一次发布。</li>
+            <li>支持临时媒体上传源、上传超时和本机 API 用量查看。</li>
+            <li>支持图片/视频水印，以及本机 Ollama 自动生成标题建议。</li>
+          </ul>
+          <div class="officialSiteBox">
+            <span>官方网站</span>
+            <a href="https://cangify.com" data-open-url="https://cangify.com">cangify.com</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="logs" class="panel">
+        <div class="topbar">
+          <div>
+            <h2>运行日志</h2>
+            <p>上传、发布、错误信息都会显示在这里。</p>
+          </div>
+          <button id="clearLog">清空日志</button>
+        </div>
+        <div id="log" class="log"></div>
+      </section>
+
+      <section id="ollama" class="panel">
+        <div class="topbar">
+          <div>
+            <h2>Ollama 设置</h2>
+            <p>对接安装在电脑里的 Ollama，用图片或视频截帧自动生成标题建议。</p>
+          </div>
+          <button id="refreshOllamaModels" class="primary">读取模型</button>
+        </div>
+
+        <div class="grid two">
+          <div class="card">
+            <label><input id="ollamaEnabled" type="checkbox" /> <span id="ollamaEnabledText">启用 Ollama 自动取标题</span></label>
+            <label id="ollamaUrlLabel">Ollama 地址</label>
+            <input id="ollamaUrl" placeholder="http://127.0.0.1:11434" />
+            <label id="ollamaModelLabel">视觉模型</label>
+            <select id="ollamaModel"></select>
+            <div class="row gap ollamaActions">
+              <button id="saveOllamaSettings" class="primary">保存 Ollama 设置</button>
+              <button id="testOllama">测试连接</button>
+            </div>
+            <div id="ollamaStatus" class="statusLine">还没有测试连接。</div>
+            <div class="ollamaUsageBox">
+              <div class="row between">
+                <label id="ollamaUsageTitle">Ollama Token 用量</label>
+                <button id="refreshOllamaUsage">刷新用量</button>
+              </div>
+              <div id="ollamaUsageCards" class="usageCards compactUsage"></div>
+              <div id="ollamaUsageMeta" class="usageLimits"></div>
+            </div>
+            <p id="ollamaModelHelp" class="small">建议使用支持图片的视觉模型，例如 llava、llava:13b、bakllava、qwen2.5vl 等。模型需要先在 Ollama 里 pull 好。</p>
+          </div>
+
+          <div class="card">
+            <label id="ollamaPromptLabel">取标题要求 / Ollama 提示词</label>
+            <textarea id="ollamaPrompt" placeholder="例如：请根据图片/视频内容，生成一个适合社交媒体发布的中文标题。标题要简短、吸引人，不要超过 20 个字，只输出标题，不要解释。"></textarea>
+            <p id="ollamaPromptHelp" class="small">这里填写的是给 Ollama 的取标题规则。你可以要求标题语言、长度、风格、是否带表情、是否只输出标题等。</p>
+            <label id="ollamaTimeoutLabel">超时时间（毫秒）</label>
+            <input id="ollamaTimeoutMs" type="number" min="30000" step="10000" />
+            <p id="ollamaPrivacyHelp" class="small">图片会直接提交给 Ollama；视频会在本机截取 8 张图后提交。不会上传到外网。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="settings" class="panel">
+        <div class="topbar">
+          <div>
+            <h2>设置</h2>
+            <p>API Key 保存在本机 Electron 用户数据目录，不写进项目代码。</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <label>Buffer API Key</label>
+          <div class="secretRow">
+            <input id="bufferApiKey" type="password" placeholder="Bearer token / API key" />
+            <button id="toggleKey">显示</button>
+          </div>
+          <div class="row gap">
+            <button id="saveSettings" class="primary">保存设置</button>
+            <button id="testKey">测试并读取组织</button>
+            <button id="logoutKey" class="dangerBtn">退出 API Key</button>
+            <button id="openBufferApi">打开 Buffer API 设置页</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <label>Buffer API 用量</label>
+            <button id="refreshUsage">刷新用量</button>
+          </div>
+          <p class="small">Buffer 官方限制按客户端计算：15 分钟、24 小时、30 天滚动窗口。下方“响应头剩余量”来自 Buffer 最近一次 API 响应；“本机统计”是这个软件在本机记录的调用次数。</p>
+          <div id="usageCards" class="usageCards"></div>
+          <div id="usageLimits" class="usageLimits"></div>
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <label>临时上传源设置</label>
+            <button id="saveUploadSettings" class="primary">保存上传源设置</button>
+          </div>
+          <p class="small">按列表顺序尝试；失败、超时、或返回的不是图片/视频直链，就自动试下一个。</p>
+          <div id="uploaders" class="uploaderList"></div>
+
+          <div class="sourceSettings">
+            <div class="sourceSetting">
+              <strong>Pixeldrain</strong>
+              <span>保存时间：60 天未访问才删除；下载/访问会续期。上传需要 API Key。</span>
+              <input id="pixeldrainApiKey" type="password" placeholder="Pixeldrain API Key" />
+            </div>
+            <div class="sourceSetting">
+              <strong>Catbox</strong>
+              <span>保存时间：长期保存（适合兜底，但不保证永久 SLA）。</span>
+            </div>
+            <div class="sourceSetting">
+              <strong>Litterbox</strong>
+              <span>保存时间：</span>
+              <select id="litterboxTime">
+                <option value="1h">1 小时</option>
+                <option value="12h">12 小时</option>
+                <option value="24h">24 小时</option>
+                <option value="72h">72 小时</option>
+              </select>
+            </div>
+            <div class="sourceSetting">
+              <strong>temp.sh</strong>
+              <span>保存时间：固定 3 天。</span>
+            </div>
+            <div class="sourceSetting">
+              <strong>0x0.st</strong>
+              <span>保存时间：服务端自动管理，通常至少约 30 天，软件不能指定。</span>
+            </div>
+            <div class="sourceSetting">
+              <strong>file.io</strong>
+              <span>保存时间：</span>
+              <select id="fileioExpires">
+                <option value="1d">1 天</option>
+                <option value="3d">3 天</option>
+                <option value="7d">7 天</option>
+                <option value="14d">14 天</option>
+                <option value="30d">30 天</option>
+              </select>
+            </div>
+          </div>
+
+          <label>单个上传源超时（毫秒）</label>
+          <input id="uploadTimeoutMs" type="number" min="10000" step="1000" />
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

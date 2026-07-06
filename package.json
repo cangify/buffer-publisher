@@ -1,0 +1,52 @@
+{
+  "name": "buffer-publisher",
+  "version": "0.1.0",
+  "description": "Electron desktop publisher for Buffer API with temporary media URL upload fallback.",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node node_modules/electron/cli.js --no-sandbox --disable-gpu .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win zip --x64",
+    "dist:mac": "electron-builder --mac zip --x64 --arm64"
+  },
+  "build": {
+    "appId": "com.zoxuan.bufferpublisher",
+    "productName": "Buffer发布器",
+    "icon": "build/icon.png",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "zip"
+      ],
+      "artifactName": "${productName}-windows-${arch}-${version}.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "target": [
+        "zip"
+      ],
+      "category": "public.app-category.productivity",
+      "artifactName": "${productName}-mac-${arch}-${version}.${ext}"
+    },
+    "asarUnpack": [
+      "node_modules/@ffmpeg-installer/**"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0"
+  }
+}
