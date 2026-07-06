@@ -10,7 +10,8 @@ const state = {
   files: [],
   uploadedAssets: [],
   ollamaModels: [],
-  aiTitle: ''
+  aiTitle: '',
+  sidebarAd: { items: [], index: 0, version: '', current: null, rotateTimer: null, refreshTimer: null }
 };
 
 const uploaderNames = {
@@ -333,6 +334,58 @@ function renderPostAssets(post) {
     `;
   }).join('');
   return `<div class="postMediaGrid">${items}</div>`;
+}
+
+
+function adImageUrl(url, version) {
+  try {
+    const next = new URL(url);
+    next.searchParams.set('_fo_ad_v', version || Date.now());
+    return next.toString();
+  } catch {
+    const sep = String(url).includes('?') ? '&' : '?';
+    return `${url}${sep}_fo_ad_v=${encodeURIComponent(version || Date.now())}`;
+  }
+}
+
+function renderSidebarAdItem() {
+  const box = $('#sidebarAd');
+  if (!box) return;
+  const item = state.sidebarAd.items[state.sidebarAd.index];
+  if (!item) {
+    state.sidebarAd.current = null;
+    box.classList.add('disabled');
+    box.innerHTML = '<div class="sidebarAdPlaceholder">广告位<br>250×250</div>';
+    return;
+  }
+  state.sidebarAd.current = item;
+  box.classList.remove('disabled');
+  box.title = item.title || item.alt || '广告';
+  box.innerHTML = `<img src="${escapeHtml(adImageUrl(item.imageUrl, state.sidebarAd.version))}" alt="${escapeHtml(item.alt || item.title || '广告')}">`;
+}
+
+function scheduleSidebarAd(ad) {
+  clearInterval(state.sidebarAd.rotateTimer);
+  clearTimeout(state.sidebarAd.refreshTimer);
+  state.sidebarAd.items = ad.enabled ? (ad.ads || []) : [];
+  state.sidebarAd.index = 0;
+  state.sidebarAd.version = ad.updatedAt || ad.version || Date.now();
+  renderSidebarAdItem();
+  if (state.sidebarAd.items.length > 1) {
+    state.sidebarAd.rotateTimer = setInterval(() => {
+      state.sidebarAd.index = (state.sidebarAd.index + 1) % state.sidebarAd.items.length;
+      renderSidebarAdItem();
+    }, Math.max(3, Number(ad.intervalSeconds) || 5) * 1000);
+  }
+  state.sidebarAd.refreshTimer = setTimeout(loadSidebarAd, Math.max(30, Number(ad.refreshSeconds) || 300) * 1000);
+}
+
+async function loadSidebarAd() {
+  try {
+    scheduleSidebarAd(await window.appApi.getSidebarAd());
+  } catch {
+    scheduleSidebarAd({ enabled: false, ads: [], intervalSeconds: 5, refreshSeconds: 300 });
+  }
 }
 
 function bindPostMediaLinks() {
@@ -926,6 +979,8 @@ ${text}` : title;
   $('#clearLog').onclick = () => { $('#log').textContent = ''; };
   $('#openBufferApi').onclick = () => window.appApi.openExternal('https://publish.buffer.com/settings/api');
   $('#openOfficialSite').onclick = () => window.appApi.openExternal('https://cangify.com');
+  $('#sidebarAd').onclick = () => { if (state.sidebarAd.current?.linkUrl) window.appApi.openExternal(state.sidebarAd.current.linkUrl); };
+  $('#sidebarAd').onkeydown = event => { if ((event.key === 'Enter' || event.key === ' ') && state.sidebarAd.current?.linkUrl) window.appApi.openExternal(state.sidebarAd.current.linkUrl); };
   bindPostMediaLinks();
 
   const dropZone = $('#dropZone');
@@ -947,6 +1002,7 @@ ${text}` : title;
 (async function init() {
   bindEvents();
   await loadConfig();
+  loadSidebarAd();
   renderFiles();
   renderPosts();
   await refreshUsage();

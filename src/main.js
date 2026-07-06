@@ -11,6 +11,7 @@ const BUFFER_ENDPOINT = 'https://api.buffer.com';
 const DEFAULT_UPLOADERS = ['pixeldrain', 'catbox', 'litterbox', 'tempsh', '0x0', 'fileio'];
 const BUFFER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_UPLOAD_TARGET_BYTES = Math.floor(BUFFER_IMAGE_MAX_BYTES * 0.94);
+const SIDEBAR_AD_URL = 'https://cangify.com/globle/ads/buffer-publisher/buffer-publisher.json';
 
 let mainWindow;
 
@@ -164,6 +165,59 @@ async function recordBufferUsage({ ok, status, headers, error }) {
   };
   await writeUsage(next);
   return summarizeUsage(next);
+}
+
+
+function safeHttpUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    return url.toString();
+  } catch {
+    return '';
+  }
+}
+
+function normalizeSidebarAd(raw) {
+  const data = raw && typeof raw === 'object' ? raw : {};
+  const version = String(data.updatedAt || data.version || Date.now());
+  const ads = Array.isArray(data.ads) ? data.ads.map((item, index) => {
+    const imageUrl = safeHttpUrl(item?.imageUrl);
+    const linkUrl = safeHttpUrl(item?.linkUrl);
+    if (!imageUrl) return null;
+    return {
+      title: String(item?.title || `广告 ${index + 1}`).slice(0, 80),
+      alt: String(item?.alt || item?.title || `广告 ${index + 1}`).slice(0, 120),
+      imageUrl,
+      linkUrl: linkUrl || 'https://cangify.com/'
+    };
+  }).filter(Boolean) : [];
+  return {
+    enabled: Boolean(data.enabled) && ads.length > 0,
+    intervalSeconds: Math.max(3, Math.min(3600, Number(data.intervalSeconds) || 5)),
+    refreshSeconds: Math.max(30, Math.min(86400, Number(data.refreshSeconds) || 300)),
+    updatedAt: data.updatedAt || '',
+    version,
+    ads
+  };
+}
+
+async function getSidebarAd() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(SIDEBAR_AD_URL, {
+      signal: controller.signal,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) throw new Error(`广告 JSON HTTP ${res.status}`);
+    return normalizeSidebarAd(await res.json());
+  } catch (err) {
+    return { enabled: false, intervalSeconds: 5, refreshSeconds: 300, updatedAt: '', version: '', ads: [], error: err.message };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function createWindow() {
@@ -687,7 +741,12 @@ ipcMain.handle('files:fromPaths', async (_evt, filePaths) => Promise.all(filePat
   const stat = await fs.stat(filePath);
   return { path: filePath, name: path.basename(filePath), size: stat.size, mimeType: mimeFromPath(filePath) };
 })));
-ipcMain.handle('shell:openExternal', async (_evt, url) => shell.openExternal(url));
+ipcMain.handle('shell:openExternal', async (_evt, url) => {
+  const safeUrl = safeHttpUrl(url);
+  if (!safeUrl) throw new Error('无效链接');
+  return shell.openExternal(safeUrl);
+});
+ipcMain.handle('ads:sidebar', getSidebarAd);
 ipcMain.handle('ollama:models', async () => listOllamaModels(await readConfig()));
 ipcMain.handle('ollama:title', async (_evt, payload) => generateOllamaTitle(await readConfig(), payload.images || [], payload.prompt || ''));
 ipcMain.handle('ollama:usage', async () => summarizeOllamaUsage(await readOllamaUsage()));

@@ -3,6 +3,7 @@ const { pathToFileURL } = require('url');
 
 contextBridge.exposeInMainWorld('appApi', {
   getConfig: () => ipcRenderer.invoke('config:get'),
+  getSidebarAd: () => ipcRenderer.invoke('ads:sidebar'),
   saveConfig: patch => ipcRenderer.invoke('config:save', patch),
   pickFiles: () => ipcRenderer.invoke('files:pick'),
   pickWatermarkImage: () => ipcRenderer.invoke('files:pick-watermark-image'),
